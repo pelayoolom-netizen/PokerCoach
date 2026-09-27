@@ -179,91 +179,46 @@ Valores válidos: "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "
 });
 
 // ----------------------------------------------------
-// 3. SERVER-AUTHORITATIVE MULTIPLAYER ROOMS
+// 3. SERVER-AUTHORITATIVE MULTIPLAYER ROOMS & REALTIME SSE
 // ----------------------------------------------------
+interface ConnectedClient {
+  playerId: string;
+  res: express.Response;
+}
+
 interface MultiplayerRoom {
   code: string;
   hostId: string;
-  players: { id: string; name: string; avatar: string }[];
+  players: { id: string; name: string; avatar: string; joinedAt: number }[];
   engine: TexasHoldemEngine | null;
   createdAt: number;
+  lastActivity: number;
+  clients: Set<ConnectedClient>;
 }
 
 const rooms = new Map<string, MultiplayerRoom>();
 
-app.post('/api/multiplayer/create', (req, res) => {
-  const { hostId, hostName, avatar } = req.body;
-  const code = 'PK-' + Math.floor(1000 + Math.random() * 9000);
-
-  const room: MultiplayerRoom = {
-    code,
-    hostId: hostId || 'host',
-    players: [{ id: hostId || 'host', name: hostName || 'Host', avatar: avatar || '👑' }],
-    engine: null,
-    createdAt: Date.now(),
-  };
-
-  rooms.set(code, room);
-  res.json({ code, room });
-});
-
-app.post('/api/multiplayer/join', (req, res) => {
-  const { code, playerId, playerName, avatar } = req.body;
-  const room = rooms.get(code);
-  if (!room) {
-    return res.status(404).json({ error: 'La sala especificada no existe.' });
+// Clean up dead rooms every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, room] of rooms.entries()) {
+    if (now - room.lastActivity > 2 * 60 * 60 * 1000) {
+      rooms.delete(code);
+    }
   }
+}, 30 * 60 * 1000);
 
-  if (room.players.length >= 8) {
-    return res.status(400).json({ error: 'La sala está completa (máx 8 jugadores).' });
-  }
-
-  if (!room.players.some((p) => p.id === playerId)) {
-    room.players.push({
-      id: playerId || 'player_' + Date.now(),
-      name: playerName || 'Jugador ' + (room.players.length + 1),
-      avatar: avatar || '🤠',
-    });
-  }
-
-  res.json({ success: true, room });
-});
-
-app.post('/api/multiplayer/start', (req, res) => {
-  const { code, hostId } = req.body;
-  const room = rooms.get(code);
-  if (!room) return res.status(404).json({ error: 'Sala no encontrada.' });
-  if (room.hostId !== hostId) return res.status(403).json({ error: 'Solo el anfitrión puede iniciar la partida.' });
-  if (room.players.length < 2) return res.status(400).json({ error: 'Se necesitan al menos 2 jugadores.' });
-
-  const settings: GameSettings = {
-    startingChips: 1000,
-    smallBlind: 10,
-    bigBlind: 20,
-    playerCount: room.players.length,
-    difficulty: 'intermediate',
-  };
-
-  room.engine = new TexasHoldemEngine(
-    settings,
-    room.players.map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, isBot: false }))
-  );
-  room.engine.startNewHand();
-
-  res.json({ success: true, state: room.engine.state });
-});
-
-app.get('/api/multiplayer/state/:code', (req, res) => {
-  const { code } = req.params;
-  const playerId = req.query.playerId as string;
-  const room = rooms.get(code);
-  if (!room) return res.status(404).json({ error: 'Sala no encontrada.' });
-
+function getSanitizedRoomState(room: MultiplayerRoom, playerId?: string) {
   if (!room.engine) {
-    return res.json({ status: 'lobby', players: room.players, code: room.code });
+    return {
+      status: 'lobby',
+      code: room.code,
+      hostId: room.hostId,
+      players: room.players,
+      createdAt: room.createdAt,
+    };
   }
 
-  // Server-authoritative card hiding: mask other players' hole cards unless showdown
   const rawState = room.engine.state;
   const isShowdown = rawState.round === 'showdown' || rawState.round === 'ended';
 
@@ -277,26 +232,277 @@ app.get('/api/multiplayer/state/:code', (req, res) => {
     };
   });
 
-  res.json({
+  const legalActions = playerId ? room.engine.getLegalActions(playerId) : null;
+
+  return {
     status: 'in_game',
+    code: room.code,
+    hostId: room.hostId,
     state: {
       ...rawState,
       players: sanitizedPlayers,
     },
+    legalActions,
+  };
+}
+
+function broadcastRoom(code: string) {
+  const room = rooms.get(code);
+  if (!room) return;
+  room.lastActivity = Date.now();
+
+  for (const client of Array.from(room.clients)) {
+    try {
+      const payload = getSanitizedRoomState(room, client.playerId);
+      client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    } catch {
+      room.clients.delete(client);
+    }
+  }
+}
+
+// Create a new multiplayer room
+app.post('/api/multiplayer/create', (req, res) => {
+  const { hostId, hostName, avatar } = req.body;
+  const code = 'PK-' + Math.floor(1000 + Math.random() * 9000);
+
+  const finalHostId = hostId || 'host_' + Math.random().toString(36).substring(2, 9);
+  const room: MultiplayerRoom = {
+    code,
+    hostId: finalHostId,
+    players: [
+      {
+        id: finalHostId,
+        name: hostName || 'Anfitrión',
+        avatar: avatar || '👑',
+        joinedAt: Date.now(),
+      },
+    ],
+    engine: null,
+    createdAt: Date.now(),
+    lastActivity: Date.now(),
+    clients: new Set(),
+  };
+
+  rooms.set(code, room);
+  res.json({ code, hostId: finalHostId, room: getSanitizedRoomState(room, finalHostId) });
+});
+
+// Join an existing multiplayer room
+app.post('/api/multiplayer/join', (req, res) => {
+  const { code, playerId, playerName, avatar } = req.body;
+  if (!code) return res.status(400).json({ error: 'Falta el código de sala.' });
+
+  const upperCode = code.trim().toUpperCase();
+  const room = rooms.get(upperCode);
+  if (!room) {
+    return res.status(404).json({ error: 'La sala especificada no existe. Verifica el código.' });
+  }
+
+  if (room.engine && !room.players.some((p) => p.id === playerId)) {
+    return res.status(400).json({ error: 'La partida ya comenzó. No puedes unirte a una partida en curso.' });
+  }
+
+  if (room.players.length >= 8 && !room.players.some((p) => p.id === playerId)) {
+    return res.status(400).json({ error: 'La sala está completa (máximo 8 jugadores).' });
+  }
+
+  const existingPlayer = room.players.find((p) => p.id === playerId);
+  if (!existingPlayer) {
+    room.players.push({
+      id: playerId || 'player_' + Date.now(),
+      name: playerName || 'Jugador ' + (room.players.length + 1),
+      avatar: avatar || '🤠',
+      joinedAt: Date.now(),
+    });
+  } else if (playerName) {
+    existingPlayer.name = playerName;
+    if (avatar) existingPlayer.avatar = avatar;
+  }
+
+  room.lastActivity = Date.now();
+  broadcastRoom(upperCode);
+
+  res.json({
+    success: true,
+    code: upperCode,
+    room: getSanitizedRoomState(room, playerId),
   });
 });
 
+// Real-time Server-Sent Events (SSE) Stream
+app.get('/api/multiplayer/stream/:code', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const playerId = (req.query.playerId as string) || '';
+  const room = rooms.get(code);
+
+  if (!room) {
+    return res.status(404).json({ error: 'Sala no encontrada.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const client: ConnectedClient = { playerId, res };
+  room.clients.add(client);
+  room.lastActivity = Date.now();
+
+  // Send initial state immediately
+  const initialPayload = getSanitizedRoomState(room, playerId);
+  res.write(`data: ${JSON.stringify(initialPayload)}\n\n`);
+
+  // Keep alive comment every 15s
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': keepalive\n\n');
+    } catch {
+      clearInterval(keepAlive);
+      room.clients.delete(client);
+    }
+  }, 15000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    room.clients.delete(client);
+  });
+});
+
+// Polling fallback state endpoint
+app.get('/api/multiplayer/state/:code', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const playerId = req.query.playerId as string;
+  const room = rooms.get(code);
+  if (!room) return res.status(404).json({ error: 'Sala no encontrada.' });
+
+  res.json(getSanitizedRoomState(room, playerId));
+});
+
+// Start the game in room (host only)
+app.post('/api/multiplayer/start', (req, res) => {
+  const { code, hostId, startingChips = 1000, smallBlind = 10 } = req.body;
+  const upperCode = (code || '').trim().toUpperCase();
+  const room = rooms.get(upperCode);
+  if (!room) return res.status(404).json({ error: 'Sala no encontrada.' });
+
+  if (room.hostId !== hostId) {
+    return res.status(403).json({ error: 'Solo el anfitrión puede iniciar la partida.' });
+  }
+
+  if (room.players.length < 2) {
+    return res.status(400).json({ error: 'Se necesitan al menos 2 jugadores para jugar.' });
+  }
+
+  const settings: GameSettings = {
+    startingChips: Number(startingChips) || 1000,
+    smallBlind: Number(smallBlind) || 10,
+    bigBlind: (Number(smallBlind) || 10) * 2,
+    playerCount: room.players.length,
+    difficulty: 'intermediate',
+  };
+
+  room.engine = new TexasHoldemEngine(
+    settings,
+    room.players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
+      isBot: false,
+    }))
+  );
+
+  room.engine.startNewHand();
+  broadcastRoom(upperCode);
+
+  res.json({ success: true, state: getSanitizedRoomState(room, hostId) });
+});
+
+// Submit a player action (fold, check, call, bet, raise, all-in)
 app.post('/api/multiplayer/action', (req, res) => {
   const { code, playerId, action, amount } = req.body;
-  const room = rooms.get(code);
-  if (!room || !room.engine) return res.status(404).json({ error: 'Partida no encontrada.' });
+  const upperCode = (code || '').trim().toUpperCase();
+  const room = rooms.get(upperCode);
+  if (!room || !room.engine) {
+    return res.status(404).json({ error: 'Partida no encontrada o aún no ha comenzado.' });
+  }
 
   try {
-    room.engine.executeAction(playerId, action as PlayerActionType, amount);
-    res.json({ success: true, state: room.engine.state });
+    room.engine.executeAction(playerId, action as PlayerActionType, amount ? Number(amount) : undefined);
+    broadcastRoom(upperCode);
+    res.json({ success: true, state: getSanitizedRoomState(room, playerId) });
+  } catch (err: any) {
+    console.error('Multiplayer action error:', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Deal next hand
+app.post('/api/multiplayer/next-hand', (req, res) => {
+  const { code, playerId } = req.body;
+  const upperCode = (code || '').trim().toUpperCase();
+  const room = rooms.get(upperCode);
+  if (!room || !room.engine) {
+    return res.status(404).json({ error: 'Partida no encontrada.' });
+  }
+
+  try {
+    // Check if at least 2 players have chips
+    const playersWithChips = room.engine.state.players.filter((p) => p.chips > 0);
+    if (playersWithChips.length < 2) {
+      // Reload busted players with chips so fun doesn't end
+      for (const p of room.engine.state.players) {
+        if (p.chips <= 0) {
+          p.chips = room.engine.state.settings.startingChips;
+        }
+      }
+    }
+
+    room.engine.startNewHand();
+    broadcastRoom(upperCode);
+    res.json({ success: true, state: getSanitizedRoomState(room, playerId) });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
+});
+
+// Rebuy / Reload chips when busted
+app.post('/api/multiplayer/rebuy', (req, res) => {
+  const { code, playerId } = req.body;
+  const upperCode = (code || '').trim().toUpperCase();
+  const room = rooms.get(upperCode);
+  if (!room || !room.engine) return res.status(404).json({ error: 'Partida no encontrada.' });
+
+  const target = room.engine.state.players.find((p) => p.id === playerId);
+  if (target && target.chips <= 0) {
+    target.chips = room.engine.state.settings.startingChips;
+    target.folded = false;
+    room.engine.state.historyLog.push(`🔄 ${target.name} recargó fichas para continuar jugando.`);
+    broadcastRoom(upperCode);
+  }
+
+  res.json({ success: true, state: getSanitizedRoomState(room, playerId) });
+});
+
+// Leave room
+app.post('/api/multiplayer/leave', (req, res) => {
+  const { code, playerId } = req.body;
+  const upperCode = (code || '').trim().toUpperCase();
+  const room = rooms.get(upperCode);
+  if (!room) return res.json({ success: true });
+
+  room.players = room.players.filter((p) => p.id !== playerId);
+  if (room.players.length === 0) {
+    rooms.delete(upperCode);
+  } else {
+    if (room.hostId === playerId) {
+      room.hostId = room.players[0].id;
+    }
+    broadcastRoom(upperCode);
+  }
+
+  res.json({ success: true });
 });
 
 // ----------------------------------------------------

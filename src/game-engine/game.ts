@@ -46,6 +46,7 @@ export class TexasHoldemEngine {
   public state: TableState;
   private deck: Deck;
   private playersWhoActedInRound: Set<string>;
+  private accumulatedPot: number = 0;
 
   constructor(settings: GameSettings, playerConfigs: { id: string; name: string; isBot: boolean; avatar?: string }[]) {
     this.deck = new Deck();
@@ -93,6 +94,8 @@ export class TexasHoldemEngine {
     }
 
     this.state.handNumber += 1;
+    this.accumulatedPot = 0;
+    this.state.totalPot = 0;
     this.state.isHandActive = true;
     this.state.round = 'preflop';
     this.state.communityCards = [];
@@ -409,8 +412,11 @@ export class TexasHoldemEngine {
 
   // Advances game to next street (Flop, Turn, River, Showdown)
   private advanceToNextRound(): void {
-    // Reset round bets into pots
-    this.updatePots();
+    // Accumulate all bets from the street that just concluded into the main pot
+    const currentRoundBets = this.state.players.reduce((sum, p) => sum + p.currentBet, 0);
+    this.accumulatedPot += currentRoundBets;
+    this.state.totalPot = this.accumulatedPot;
+
     for (const p of this.state.players) {
       p.currentBet = 0;
       if (p.lastAction && p.lastAction.type !== 'fold' && !p.isAllIn) {
@@ -462,16 +468,10 @@ export class TexasHoldemEngine {
     this.state.currentTurnIndex = this.findNextActiveIndex(this.state.dealerIndex);
   }
 
-  // Calculates exact side pots for any number of all-ins
+  // Calculates exact pots including previous rounds and active bets
   private updatePots(): void {
-    const bets = this.state.players.map((p) => ({
-      id: p.id,
-      bet: p.currentBet,
-      folded: p.folded,
-    })).filter((b) => b.bet > 0);
-
     const totalCurrentBets = this.state.players.reduce((sum, p) => sum + p.currentBet, 0);
-    this.state.totalPot = totalCurrentBets;
+    this.state.totalPot = this.accumulatedPot + totalCurrentBets;
   }
 
   // When all opponents fold, the remaining player takes the pot

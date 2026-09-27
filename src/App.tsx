@@ -46,6 +46,9 @@ const VIEW_TITLES: Record<AppView, string> = {
 
 function getViewFromLocation(): AppView {
   if (typeof window === 'undefined') return 'dashboard';
+  const search = window.location.search.toLowerCase();
+  if (search.includes('room=')) return 'play';
+
   const path = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase().replace('#', '');
 
