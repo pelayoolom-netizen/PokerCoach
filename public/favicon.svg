@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Rounded Background -->
+  <rect width="64" height="64" rx="16" fill="#090d0b"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" stroke="#10b981" stroke-opacity="0.3" stroke-width="2"/>
+  
+  <!-- Subtle felt gradient inner plate -->
+  <circle cx="32" cy="32" r="24" fill="url(#pokerGradient)"/>
+  
+  <!-- Spade Icon in Crisp White/Emerald -->
+  <path d="M32 14C29.5 20 20 26.5 20 33C20 37.5 23.5 41 28 41C29.6 41 31.1 40.4 32.3 39.4L31 48H33L31.7 39.4C32.9 40.4 34.4 41 36 41C40.5 41 44 37.5 44 33C44 26.5 34.5 20 32 14Z" fill="#ecfdf5"/>
+  <path d="M32 17C30.2 21.5 22.5 27 22.5 33C22.5 36.3 25 39 28 39C29.5 39 30.8 38.4 31.8 37.4L30 46H34L32.2 37.4C33.2 38.4 34.5 39 36 39C39 39 41.5 36.3 41.5 33C41.5 27 33.8 21.5 32 17Z" fill="#10b981"/>
+
+  <defs>
+    <radialGradient id="pokerGradient" cx="32" cy="32" r="24" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#064e3b" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#022c22" stop-opacity="0.4"/>
+    </radialGradient>
+  </defs>
+</svg>

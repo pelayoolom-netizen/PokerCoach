@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://poker-coach-om9nqj9u6-dexel-studios.vercel.app/sitemap.xml

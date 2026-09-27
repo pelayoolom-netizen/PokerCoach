@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppView } from './types/navigation';
 import { UserProfile } from './types/user';
 import { HandHistoryRecord } from './types/poker';
@@ -24,8 +24,43 @@ import { AICoachView } from './components/views/AICoachView';
 import { StatsView } from './components/views/StatsView';
 import { runPokerEngineTests } from './game-engine/engine.test';
 
+const VIEW_PATHS: Record<AppView, string> = {
+  dashboard: '/',
+  learn: '/aprender',
+  play: '/jugar',
+  analyzer: '/analizador',
+  trainer: '/entrenar',
+  coach: '/entrenador-ia',
+  stats: '/estadisticas',
+};
+
+const VIEW_TITLES: Record<AppView, string> = {
+  dashboard: 'Poker Coach — Aprende a jugar al póker',
+  learn: 'Tutorial de Texas Hold\'em y Reglas | Poker Coach',
+  play: 'Mesa de Juego contra Bots y Amigos | Poker Coach',
+  analyzer: 'Analizador de Manos y Calculadora de Showdown | Poker Coach',
+  trainer: 'Entrenamiento de Decisiones y Situaciones | Poker Coach',
+  coach: 'Entrenador IA de Póker | Poker Coach',
+  stats: 'Estadísticas y Progreso del Jugador | Poker Coach',
+};
+
+function getViewFromLocation(): AppView {
+  if (typeof window === 'undefined') return 'dashboard';
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase().replace('#', '');
+
+  if (path === '/aprender' || hash === 'aprender' || hash === 'learn') return 'learn';
+  if (path === '/jugar' || hash === 'jugar' || hash === 'play') return 'play';
+  if (path === '/analizador' || hash === 'analizador' || hash === 'analyzer') return 'analyzer';
+  if (path === '/entrenar' || hash === 'entrenar' || hash === 'trainer') return 'trainer';
+  if (path === '/entrenador-ia' || hash === 'entrenador-ia' || hash === 'coach') return 'coach';
+  if (path === '/estadisticas' || hash === 'estadisticas' || hash === 'stats') return 'stats';
+
+  return 'dashboard';
+}
+
 export default function App() {
-  const [currentView, setCurrentView] = useState<AppView>('dashboard');
+  const [currentView, setCurrentView] = useState<AppView>(getViewFromLocation);
   const [profile, setProfile] = useState<UserProfile>(getStoredProfile);
   const [history, setHistory] = useState<HandHistoryRecord[]>(getStoredHistory);
   const [soundEnabled, setSoundActive] = useState<boolean>(getSoundEnabled);
@@ -39,6 +74,20 @@ export default function App() {
       console.warn('[PokerCoach Engine Tests Failures]:', testResults.failures);
     }
   }, []);
+
+  // Update document title and listen to browser popstate (back/forward)
+  useEffect(() => {
+    document.title = VIEW_TITLES[currentView] || VIEW_TITLES.dashboard;
+
+    const handlePopState = () => {
+      const v = getViewFromLocation();
+      setCurrentView(v);
+      document.title = VIEW_TITLES[v] || VIEW_TITLES.dashboard;
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentView]);
 
   // Sync profile changes to storage
   const handleUpdateProfile = (updated: UserProfile) => {
@@ -111,11 +160,16 @@ export default function App() {
     if (next) sound.playChip();
   };
 
-  const handleNavigate = (view: AppView) => {
+  const handleNavigate = useCallback((view: AppView) => {
     sound.playCard();
     setCurrentView(view);
+    const targetPath = VIEW_PATHS[view] || '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+    document.title = VIEW_TITLES[view] || VIEW_TITLES.dashboard;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0a0f0d] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">

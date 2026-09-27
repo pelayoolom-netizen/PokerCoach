@@ -13,7 +13,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   completedLessonsCount,
 }) => {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-emerald-950/60 via-zinc-900 to-zinc-950 border border-emerald-800/40 p-6 sm:p-10 shadow-2xl">
+    <section
+      aria-label="Presentación Poker Coach"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-emerald-950/60 via-zinc-900 to-zinc-950 border border-emerald-800/40 p-6 sm:p-10 shadow-2xl"
+    >
       {/* Background ambient poker felt glow */}
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -27,32 +30,33 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-zinc-100 leading-tight">
-            PokerCoach
+            Poker Coach — Aprende a jugar al póker
           </h1>
-          <p className="text-lg sm:text-xl font-medium text-emerald-400 mt-1 mb-4">
-            "Aprende. Juega. Mejora."
+          <p className="text-lg sm:text-xl font-medium text-emerald-400 mt-2 mb-4">
+            "Aprende las reglas, las manos y las decisiones básicas de forma rápida y practica jugando."
           </p>
 
           <p className="text-sm sm:text-base text-zinc-400 leading-relaxed mb-6">
-            Domina las reglas, el ranking de manos y la estrategia de Texas Hold'em.
-            Practica contra bots con toma de decisiones realistas, analiza cualquier mano con motor matemático determinista y consulta al entrenador inteligente.
+            Domina el <strong>Texas Hold'em</strong> desde cero. Conoce las combinaciones y las calles de apuestas, practica en vivo contra bots con IA, analiza situaciones reales y consulta a tu entrenador inteligente.
           </p>
 
           <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
             <button
+              type="button"
               onClick={() => onNavigate('learn')}
               className="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-950/80 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <BookOpen className="w-4 h-4" />
-              <span>Aprender a jugar</span>
+              <span>Aprender a jugar al póker</span>
             </button>
 
             <button
+              type="button"
               onClick={() => onNavigate('play')}
               className="flex items-center gap-2 px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700/80 text-zinc-100 font-semibold text-sm border border-zinc-700 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Bot className="w-4 h-4 text-emerald-400" />
-              <span>Jugar contra bots</span>
+              <span>Mesa contra bots</span>
             </button>
           </div>
         </div>
@@ -88,6 +92,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };

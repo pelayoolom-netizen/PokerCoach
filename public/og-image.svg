@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#064e3b" stop-opacity="0.8"/>
+      <stop offset="60%" stop-color="#0a0f0d" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#050807" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGlow)"/>
+
+  <!-- Border Frame -->
+  <rect x="24" y="24" width="1152" height="582" rx="32" fill="none" stroke="#10b981" stroke-opacity="0.3" stroke-width="2"/>
+
+  <!-- Brand Badge -->
+  <g transform="translate(100, 100)">
+    <rect width="72" height="72" rx="20" fill="url(#cardGrad)"/>
+    <text x="36" y="50" font-family="system-ui, -apple-system, sans-serif" font-size="38" font-weight="900" fill="#ffffff" text-anchor="middle">♠</text>
+  </g>
+
+  <!-- Brand Name & Title -->
+  <text x="195" y="150" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="900" fill="#ffffff" letter-spacing="-1">Poker Coach</text>
+  <rect x="475" y="118" width="140" height="34" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="545" y="141" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800" fill="#34d399" text-anchor="middle" letter-spacing="1">HOLD'EM</text>
+
+  <!-- Main Headline -->
+  <text x="100" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="900" fill="#f4f4f5" letter-spacing="-1.5">
+    Aprende a jugar al póker
+  </text>
+  <text x="100" y="325" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="900" fill="#34d399" letter-spacing="-1.5">
+    desde cero y practica jugando.
+  </text>
+
+  <!-- Description -->
+  <text x="100" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="400" fill="#a1a1aa">
+    Tutorial interactivo • Partidas contra bots • Analizador de manos determinista • Entrenador con IA
+  </text>
+
+  <!-- Decorative Poker Cards on the Right -->
+  <g transform="translate(900, 200)">
+    <!-- Ace of Spades Card -->
+    <g transform="rotate(-10)">
+      <rect x="-80" y="-110" width="160" height="230" rx="16" fill="#ffffff" stroke="#e4e4e7" stroke-width="3" filter="drop-shadow(0 15px 25px rgba(0,0,0,0.6))"/>
+      <text x="-55" y="-60" font-family="system-ui, sans-serif" font-size="32" font-weight="900" fill="#09090b">A</text>
+      <text x="-55" y="-30" font-family="system-ui, sans-serif" font-size="28" fill="#09090b">♠</text>
+      <text x="0" y="25" font-family="system-ui, sans-serif" font-size="64" fill="#09090b" text-anchor="middle">♠</text>
+    </g>
+    <!-- King of Spades Card -->
+    <g transform="translate(100, 40) rotate(15)">
+      <rect x="-80" y="-110" width="160" height="230" rx="16" fill="#ffffff" stroke="#e4e4e7" stroke-width="3" filter="drop-shadow(0 15px 25px rgba(0,0,0,0.7))"/>
+      <text x="-55" y="-60" font-family="system-ui, sans-serif" font-size="32" font-weight="900" fill="#09090b">K</text>
+      <text x="-55" y="-30" font-family="system-ui, sans-serif" font-size="28" fill="#09090b">♠</text>
+      <text x="0" y="25" font-family="system-ui, sans-serif" font-size="64" fill="#09090b" text-anchor="middle">♠</text>
+    </g>
+  </g>
+
+  <!-- Bottom Tagline -->
+  <text x="100" y="520" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#10b981">
+    ✓ 100% Educativo y Gratuito • Fichas Virtuales • Sin Apuestas Reales
+  </text>
+</svg>

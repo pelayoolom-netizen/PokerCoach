@@ -7,6 +7,7 @@ import { QuickActions } from '../dashboard/QuickActions';
 import { StatsSummary } from '../dashboard/StatsSummary';
 import { LearningProgressCard } from '../dashboard/LearningProgressCard';
 import { RecentActivity } from '../dashboard/RecentActivity';
+import { SeoGuideSection } from '../dashboard/SeoGuideSection';
 
 interface DashboardViewProps {
   profile: UserProfile;
@@ -21,7 +22,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Hero Section */}
+      {/* Hero Section with Semantic H1 */}
       <HeroSection
         onNavigate={onNavigate}
         completedLessonsCount={profile.stats.tutorialCompletedLessons.length}
@@ -41,6 +42,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onNavigateToStats={() => onNavigate('stats')}
         />
       </div>
+
+      {/* Educational SEO Guide Section: Aprende a jugar al póker */}
+      <SeoGuideSection onNavigate={onNavigate} />
 
       {/* Recent Games / Activity */}
       <RecentActivity
