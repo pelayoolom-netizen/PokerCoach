@@ -1,0 +1,6 @@
+{
+  "name": "PokerCoach",
+  "description": "Aprende, juega y mejora en Texas Hold'em. Tutorial interactivo, partidas con bots, análisis de manos, entrenador con IA y estadísticas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
